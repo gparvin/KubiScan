@@ -4,6 +4,7 @@ import os
 from tempfile import mkstemp
 from shutil import move
 from kubernetes.client.configuration import Configuration
+from kubernetes.client.api_client import ApiClient
 
 # TODO: Should be removed after the bug will be solved:
 # https://github.com/kubernetes-client/python/issues/577
@@ -50,6 +51,7 @@ def api_init(host=None, token_filename=None, cert_filename=None, context=None):
     global api_temp
 
     configuration = Configuration()
+    api_client = ApiClient()
 
     if host and token_filename:
         # remotely
@@ -69,11 +71,12 @@ def api_init(host=None, token_filename=None, cert_filename=None, context=None):
                 replace(kube_config_bak_path, ': /', ': /tmp/')
 
             config.load_kube_config(kube_config_bak_path, context=context, client_configuration=configuration)
+            api_client = ApiClient(configuration=configuration)
         else:
             config.load_kube_config(context=context)
 
-    CoreV1Api = client.CoreV1Api()
-    RbacAuthorizationV1Api = client.RbacAuthorizationV1Api()
+    CoreV1Api = client.CoreV1Api(api_client=api_client)
+    RbacAuthorizationV1Api = client.RbacAuthorizationV1Api(api_client=api_client)
     api_temp = ApiClientTemp(configuration=configuration)
 
 class BearerTokenLoader(object):
