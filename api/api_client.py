@@ -3,6 +3,7 @@ from shutil import copyfile
 import os
 from tempfile import mkstemp
 from shutil import move
+from kubernetes.client.configuration import Configuration
 
 # TODO: Should be removed after the bug will be solved:
 # https://github.com/kubernetes-client/python/issues/577
@@ -48,6 +49,8 @@ def api_init(host=None, token_filename=None, cert_filename=None, context=None):
     global RbacAuthorizationV1Api
     global api_temp
 
+    configuration = Configuration()
+
     if host and token_filename:
         # remotely
         token_filename = os.path.abspath(token_filename)
@@ -55,7 +58,7 @@ def api_init(host=None, token_filename=None, cert_filename=None, context=None):
             cert_filename = os.path.abspath(cert_filename)
         BearerTokenLoader(host=host, token_filename=token_filename, cert_filename=cert_filename).load_and_set()
 
-    else:
+    else:    
         if running_in_docker_container():
             # TODO: Consider using config.load_incluster_config() from container created by Kubernetes. Required service account with privileged permissions.
             # Must have mounted volume
@@ -65,13 +68,13 @@ def api_init(host=None, token_filename=None, cert_filename=None, context=None):
                 copyfile(container_volume_prefix + os.path.expandvars('$CONF_PATH'), kube_config_bak_path)
                 replace(kube_config_bak_path, ': /', ': /tmp/')
 
-            config.load_kube_config(kube_config_bak_path, context=context)
+            config.load_kube_config(kube_config_bak_path, context=context, client_configuration=configuration)
         else:
             config.load_kube_config(context=context)
 
     CoreV1Api = client.CoreV1Api()
     RbacAuthorizationV1Api = client.RbacAuthorizationV1Api()
-    api_temp = ApiClientTemp(configuration=client.configuration)
+    api_temp = ApiClientTemp(configuration=configuration)
 
 class BearerTokenLoader(object):
     def __init__(self, host, token_filename, cert_filename=None):
